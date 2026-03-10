@@ -49,7 +49,7 @@ class RefreshModeManager(
         Log.d(TAG, "App changed to: $packageName")
 
         // Remember the new app
-        if (packageName != "com.example.inkmaster") {
+        if (packageName != "com.undefinedProgrammer.inkmaster") {
             currentClassifier = packageName
         }
 
@@ -87,7 +87,7 @@ class RefreshModeManager(
             if (meinkService != null) {
                 Log.d(TAG, "MeInk service initialized successfully")
                 //setMeinkMode(currentMeinkMode)
-                meinkService!!.setDisplayMode("com.example.inkmaster", currentMode.mode)
+                meinkService!!.setDisplayMode("com.undefinedProgrammer.inkmaster", currentMode.mode)
             } else {
                 Log.w(TAG, "MeInk service not available, will retry")
             }
@@ -103,7 +103,7 @@ class RefreshModeManager(
         }
 
         try {
-            meinkService!!.setDisplayMode("com.example.inkmaster", mode)
+            meinkService!!.setDisplayMode("com.undefinedProgrammer.inkmaster", mode)
         } catch (e: RemoteException) {
             Log.w(TAG, "MeInk setMode($mode) failed")
         }

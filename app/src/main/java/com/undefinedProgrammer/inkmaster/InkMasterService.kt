@@ -77,7 +77,7 @@ class InkMasterService : AccessibilityService() {
             val packageName = event.packageName?.toString() ?: return
             Log.d("accesevent", "fired $packageName")
 
-            if (packageName != "com.example.inkmaster" && currentApp != packageName) {
+            if (packageName != "com.undefinedProgrammer.inkmaster" && currentApp != packageName) {
                 currentApp = packageName
                 refreshModeManager.onAppChange(packageName)
                 refresh()
