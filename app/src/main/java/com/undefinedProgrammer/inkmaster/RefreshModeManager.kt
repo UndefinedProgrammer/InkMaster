@@ -103,7 +103,15 @@ class RefreshModeManager(
         }
 
         try {
-            meinkService!!.setDisplayMode("com.undefinedProgrammer.inkmaster", mode)
+            meinkService!!.setDisplayMode(currentClassifier, mode)
+            /*meinkService!!.setCustomDisplayMode(
+                "com.undefinedProgrammer.inkmaster",        // packageName
+                "GL16",                  // waveform mode
+                "BPP_4",                // bpp
+                "GAMMA_2_20",       // gamma profile
+                1.1f,                  // brightness
+                1.2f                   // contrast
+            )*/
         } catch (e: RemoteException) {
             Log.w(TAG, "MeInk setMode($mode) failed")
         }

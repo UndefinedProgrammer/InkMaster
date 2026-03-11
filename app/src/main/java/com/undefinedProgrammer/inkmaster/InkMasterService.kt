@@ -75,7 +75,7 @@ class InkMasterService : AccessibilityService() {
     override fun onAccessibilityEvent(event: android.view.accessibility.AccessibilityEvent) {
         if (event.eventType == android.view.accessibility.AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
             val packageName = event.packageName?.toString() ?: return
-            Log.d("accesevent", "fired $packageName")
+            Log.d("accessevent", "fired $packageName")
 
             if (packageName != "com.undefinedProgrammer.inkmaster" && currentApp != packageName) {
                 currentApp = packageName
