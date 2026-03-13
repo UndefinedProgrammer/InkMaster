@@ -23,6 +23,19 @@ As the Mudita Kompakt does not come with a browser or app store, sideloading is 
 3. You will ask if you want to do it, just press allow.
 
 ## Uninstall
+Uninstalling is easy
+1. Open the inkmaster app, this will take you to Accessibility Settings.
+2. Simply toggle the InkMaster off
+3. Proceed to uninstall the app as you would normally do
+
+## FAQ
+
+#### Is it possible to change parameters such as contrast, ink-brightness etc?
+This app is limited by what is exposed by Mudita and currently it is only these modes that are available.
+There is a way of doing custom modes, but there are some limitations, I might do that in a future update.
+
+#### Will this break my phone?
+No. I mean, it is always dangerous to answer, but your Mudita Kompakt already does this when you use Mudita's own apps.
 
 ## Thanks to
 The code is based on several open source projects and I couldn't do this without
