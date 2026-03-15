@@ -3,6 +3,6 @@
     android:accessibilityFeedbackType="feedbackGeneric"
     android:canRetrieveWindowContent="true"
     android:notificationTimeout="100"
-    android:accessibilityFlags="flagRequestAccessibilityButton"
+    android:accessibilityFlags="flagRequestAccessibilityButton|flagRetrieveInteractiveWindows"
     android:settingsActivity="">
 </accessibility-service>

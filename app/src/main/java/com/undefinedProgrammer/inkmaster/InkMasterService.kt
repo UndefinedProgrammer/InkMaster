@@ -19,15 +19,26 @@ import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
+import android.view.accessibility.AccessibilityEvent
+import android.view.accessibility.AccessibilityNodeInfo
 import android.widget.Button
+import androidx.core.content.edit
 
 
+@SuppressLint("AccessibilityPolicy")
 class InkMasterService : AccessibilityService() {
+    private val TAG: String = "InkMasterService"
     private lateinit var windowManager: WindowManager
-    private lateinit var floatingButton: View
-    private lateinit var refreshModeManager: RefreshModeManager
+    private val meinkController: MeinkController = MeinkController()
     private lateinit var sharedPreferences: SharedPreferences
-    private var currentApp: String? = null
+    private var currentApp: String = "none"
+        set(name) {
+            field = name.toSharedPreferencesKey()
+        }
+    private var currentMode = RefreshMode.SPEED
+        set(mode) {
+            field = mode; meinkController.setMeinkMode(currentApp,mode)
+        }
 
     private lateinit var accessibilityButtonCallback: AccessibilityButtonCallback
     private var mIsAccessibilityButtonAvailable = false
@@ -41,15 +52,11 @@ class InkMasterService : AccessibilityService() {
             "${packageName}_preferences", // your own filename
             MODE_PRIVATE
         )
-        refreshModeManager = RefreshModeManager(
-            sharedPreferences
-        )
 
         serviceInfo = serviceInfo.apply {
             // Make sure you request accessibility button
             flags = flags or AccessibilityServiceInfo.FLAG_REQUEST_ACCESSIBILITY_BUTTON
         }
-
 
         accessibilityButtonCallback = object : AccessibilityButtonCallback() {
             override fun onClicked(controller: AccessibilityButtonController?) {
@@ -65,24 +72,74 @@ class InkMasterService : AccessibilityService() {
             }
         }
 
-
         accessibilityButtonController.registerAccessibilityButtonCallback(
             accessibilityButtonCallback
         )
 
     }
 
-    override fun onAccessibilityEvent(event: android.view.accessibility.AccessibilityEvent) {
-        if (event.eventType == android.view.accessibility.AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
-            val packageName = event.packageName?.toString() ?: return
-            Log.d("accessevent", "fired $packageName")
+    override fun onAccessibilityEvent(event: AccessibilityEvent) {
+        // do something with imeShown
+        val packageName = event.packageName?.toString()
+        Log.d(TAG, "onAccessibilityEvent $packageName $event $windows")
 
-            if (packageName != "com.undefinedProgrammer.inkmaster" && currentApp != packageName) {
-                currentApp = packageName
-                refreshModeManager.onAppChange(packageName)
-                refresh()
-            }
+        if (packageName == "com.undefinedProgrammer.inkmaster") {
+            Log.d(TAG, "onAccessibilityEvent: Ignoring InkMasterApp")
+            return
         }
+
+        if (editableInFocus()) {
+            Log.d(TAG, "onAccessibilityEvent: keyboard probably visible")
+            meinkController.setMeinkMode(currentApp,RefreshMode.SPEED)
+            return
+        }
+        if (packageName != null) {
+            Log.d(TAG, "onAccessibilityEvent: Loading mode for $packageName")
+            currentApp = packageName
+            loadMode()
+            smallRefresh()
+        }
+
+
+    }
+    fun loadMode() {
+        val fromPreferences = sharedPreferences.getInt(currentApp, RefreshMode.SPEED.mode)
+        currentMode = RefreshMode.fromInt(fromPreferences)
+        Log.d(TAG, "loadMode: $currentApp -> $currentMode")
+    }
+
+    fun saveMode() {
+        sharedPreferences.edit {
+            putInt(
+                currentApp, currentMode.mode
+            )
+        }
+        Log.d(TAG, "saveMode: $currentApp, $currentMode")
+    }
+
+    fun editableInFocus(): Boolean {
+        val root = rootInActiveWindow ?: return false
+
+        fun hasFocusedEditable(node: AccessibilityNodeInfo?): Boolean {
+            node ?: return false
+
+            if (node.isEditable && node.isFocused) return true
+
+            for (i in 0 until node.childCount) {
+                if (hasFocusedEditable(node.getChild(i))) return true
+            }
+            return false
+        }
+
+        return hasFocusedEditable(root)
+    }
+
+    private fun String.toSharedPreferencesKey(isPerAppEnabled: Boolean = true): String {
+        if (isPerAppEnabled) {
+            if (startsWith("package:")) return this
+            return "package:$this"
+        }
+        return "package:None"
     }
 
     override fun onInterrupt() {}
@@ -134,30 +191,30 @@ class InkMasterService : AccessibilityService() {
                 }
 
                 button1.setOnClickListener {
-                    refreshModeManager.changeMode(RefreshMode.CONTRAST)
-                    updateButtons(refreshModeManager.currentMode.mode)
+                    currentMode = RefreshMode.CONTRAST
+                    saveMode()
+                    updateButtons(currentMode.mode)
                     smallRefresh()
                 }
                 button2.setOnClickListener {
-                    refreshModeManager.changeMode(RefreshMode.SPEED)
-                    updateButtons(refreshModeManager.currentMode.mode)
+                    currentMode = RefreshMode.SPEED
+                    saveMode()
+                    updateButtons(currentMode.mode)
                     smallRefresh()
                 }
                 button3.setOnClickListener {
-                    refreshModeManager.changeMode(RefreshMode.CLEAR)
-                    updateButtons(refreshModeManager.currentMode.mode)
+                    currentMode = RefreshMode.CLEAR
+                    updateButtons(currentMode.mode)
+                    saveMode()
                     smallRefresh()
                 }
                 button4.setOnClickListener {
-                    refreshModeManager.changeMode(RefreshMode.LIGHT)
-                    updateButtons(refreshModeManager.currentMode.mode)
+                    currentMode = RefreshMode.LIGHT
+                    updateButtons(currentMode.mode)
+                    saveMode()
                     smallRefresh()
                 }
-
-
-                updateButtons(refreshModeManager.currentMode.mode)
-
-
+                updateButtons(currentMode.mode)
             }
             windowManager.addView(menuBinding!!.root, layoutParams)
 
@@ -228,28 +285,34 @@ class InkMasterService : AccessibilityService() {
     }
 
     fun smallRefresh() {
-
         val overlay = View(this)
 
-        windowManager.addView(
-            overlay, WindowManager.LayoutParams(
-                WindowManager.LayoutParams.MATCH_PARENT,
-                WindowManager.LayoutParams.MATCH_PARENT,
-                WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
-                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
-                PixelFormat.TRANSLUCENT
-            )
+        val params = WindowManager.LayoutParams(
+            4, 4,  // tiny region
+            WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
+                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+            PixelFormat.TRANSLUCENT
         )
 
-        overlay.bringToFront()
-        Handler(Looper.getMainLooper()).postDelayed({
-            overlay.setBackgroundColor(Color.BLACK)
+        params.x = 0
+        params.y = 0
 
-        }, 50L)
-        try {
-            windowManager.removeView(overlay)
-        } catch (_: Exception) {
-        }
+        overlay.setBackgroundColor(Color.TRANSPARENT)
+
+        windowManager.addView(overlay, params)
+
+        Handler(Looper.getMainLooper()).postDelayed({
+            overlay.setBackgroundColor(Color.argb(1, 0, 0, 0)) // tiny change
+            overlay.invalidate()
+
+            Handler(Looper.getMainLooper()).postDelayed({
+                try {
+                    windowManager.removeView(overlay)
+                } catch (_: Exception) {}
+            }, 120) // ~1 frame
+        }, 120)
     }
 }
 
