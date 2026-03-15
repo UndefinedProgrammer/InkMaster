@@ -1,5 +1,5 @@
 # InkMaster 
-![icon.svg](app/src/main/res/drawable/icon.svg)
+![icon.svg](app/src/main/res/drawable/icon.png)
 
 A really simple app that enables you to change eink refresh modes on the Mudita Kompakt.
 It does not require root, you just install it, enable it in Accessability Settings and then you are good to go.
